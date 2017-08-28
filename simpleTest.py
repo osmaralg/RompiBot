@@ -43,15 +43,25 @@ vrep.simxFinish(-1) # just in case, close all opened connections
 clientID=vrep.simxStart('127.0.0.1',19997,True,True,5000,5) # Connect to V-REP
 if clientID!=-1:
     print ('Connected to remote API server')
-
+    print ('Connected to remote API server')
     # Now try to retrieve data in a blocking fashion (i.e. a service call):
     res,objs=vrep.simxGetObjects(clientID,vrep.sim_handle_all,vrep.simx_opmode_blocking)
-    returnCode,back_left=vrep.simxGetObjectHandle(clientID,"back_left_motor",vrep.simx_opmode_blocking)	
-    returnCode,back_right=vrep.simxGetObjectHandle(clientID,"back_right_motor",vrep.simx_opmode_blocking)
-    returnCode,front_left=vrep.simxGetObjectHandle(clientID,"front_left_motor",vrep.simx_opmode_blocking)
-    returnCode,front_right=vrep.simxGetObjectHandle(clientID,"front_right_motor",vrep.simx_opmode_blocking)
-    returnCode,Sensor_motor=vrep.simxGetObjectHandle(clientID,"Sensor_motor",vrep.simx_opmode_blocking)
-    print('Back lefthandle is:',returnCode)
+    returnCode,back_left=vrep.simxGetObjectHandle(clientID,'back_left_motor',vrep.simx_opmode_blocking)	
+    returnCode,back_right=vrep.simxGetObjectHandle(clientID,'back_right_motor',vrep.simx_opmode_blocking)
+    returnCode,front_left=vrep.simxGetObjectHandle(clientID,'front_left_motor',vrep.simx_opmode_blocking)
+    returnCode,front_right=vrep.simxGetObjectHandle(clientID,'front_right_motor',vrep.simx_opmode_blocking)
+    returnCode,Sensor_motor=vrep.simxGetObjectHandle(clientID,'Sensor_motor',vrep.simx_opmode_blocking)
+    print ('Sensor_motor handle is:',Sensor_motor)
+    print ('left_motor handle is:',back_left)
+    print ('left_motor handle is:',front_left)
+    print ('right_motor handle is:',back_right)
+    print ('right_motor handle is:',front_right)
+	#print ('Sensor_motor handle is:',Sensor_motor)
+	#print ('Back left handle is:')
+	#print('Back right handle is:')
+	#print('Front left handle is:')
+	#print('Front right handle is:')
+    returnCode=vrep.simxSetJointTargetVelocity(clientID,Sensor_motor,1,vrep.simx_opmode_streaming)
 	#print(back_left)
 	#print("Back righthandle is:",back_right)
 	#print("Front lefthandle is:",front_left)
@@ -61,12 +71,12 @@ if clientID!=-1:
     else:
         print ('Remote API function call returned with error code: ',res)
 
-    time.sleep(2)
+    time.sleep(1)
 
     # Now retrieve streaming data (i.e. in a non-blocking fashion):
     startTime=time.time()
     vrep.simxGetIntegerParameter(clientID,vrep.sim_intparam_mouse_x,vrep.simx_opmode_streaming) # Initialize streaming
-    while time.time()-startTime < 5:
+    while time.time()-startTime < .01:
         returnCode,data=vrep.simxGetIntegerParameter(clientID,vrep.sim_intparam_mouse_x,vrep.simx_opmode_buffer) # Try to retrieve the streamed data
         if returnCode==vrep.simx_return_ok: # After initialization of streaming, it will take a few ms before the first value arrives, so check the return code
             print ('Mouse position x: ',data) # Mouse position x is actualized when the cursor is over V-REP's window
