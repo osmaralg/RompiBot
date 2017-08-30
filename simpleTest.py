@@ -92,18 +92,18 @@ if clientID!=-1:
     vrep.simxGetIntegerParameter(clientID,vrep.sim_intparam_mouse_x,vrep.simx_opmode_streaming) # Initialize streaming
     while time.time()-startTime < 10:
         returnCode,data=vrep.simxGetIntegerParameter(clientID,vrep.sim_intparam_mouse_x,vrep.simx_opmode_buffer) # Try to retrieve the streamed data
-        e, lrf_bin = vrep.simxGetStringSignal(clientID, name_hokuyo_data,
-                                              vrep.simx_opmode_buffer)
-        lrf_raw = vrep.simxUnpackFloats(lrf_bin)
-        lrf = np.array(lrf_raw).reshape(-1, 3)
-    for i in range (0,399):        
-        magnitud=(lrf[i,0]*lrf[i,0]+lrf[i,1]*lrf[i,1])
-        print ('la magnitud es:',magnitud)
+        e, lrf_bin = vrep.simxGetStringSignal(clientID, name_hokuyo_data,                                  vrep.simx_opmode_buffer)
         #print ('hola sensor',lrf)
         
         if returnCode==vrep.simx_return_ok: # After initialization of streaming, it will take a few ms before the first value arrives, so check the return code
             print ('Mouse position x: ',data) # Mouse position x is actualized when the cursor is over V-REP's window
-            draw_lrf(lrf)
+            lrf_raw = vrep.simxUnpackFloats(lrf_bin)
+            lrf = np.array(lrf_raw).reshape(-1, 3)
+            magnitud = np.arange(399.000)
+            for i in range (0,399):        
+                magnitud[i]=math.sqrt(lrf[i,0]*lrf[i,0]+lrf[i,1]*lrf[i,1])
+            print ('la magnitud es:',magnitud)
+            #draw_lrf(lrf)
 			#returnCode,Sensor_motor_pos=vrep.simxGetJointPosition(clientID,Sensor_motor,vrep.simx_opmode_blocking)
 			#print('La posicion del motor es:',Sensor_motor_pos)
 			
