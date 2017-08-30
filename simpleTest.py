@@ -28,7 +28,7 @@ import math
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-
+file_test = open("testfile.txt","w")
 def draw_lrf(lrf):
     lrf = np.asarray(lrf)
     fig = plt.figure()
@@ -103,6 +103,8 @@ if clientID!=-1:
             for i in range (0,399):        
                 magnitud[i]=math.sqrt(lrf[i,0]*lrf[i,0]+lrf[i,1]*lrf[i,1])
             print ('la magnitud es:',magnitud)
+            magnitud= magnitud.tostring()
+            file_test.write(magnitud)
             #draw_lrf(lrf)
 			#returnCode,Sensor_motor_pos=vrep.simxGetJointPosition(clientID,Sensor_motor,vrep.simx_opmode_blocking)
 			#print('La posicion del motor es:',Sensor_motor_pos)
@@ -115,7 +117,7 @@ if clientID!=-1:
 
     # Before closing the connection to V-REP, make sure that the last command sent out had time to arrive. You can guarantee this with (for example):
     vrep.simxGetPingTime(clientID)
-
+    file_test.close()
     # Now close the connection to V-REP:
     vrep.simxFinish(clientID)
 else:
