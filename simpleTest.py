@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright 2006-2017 Coppelia Robotics GmbH. All rights reserved. 
 # marc@coppeliarobotics.com
 # www.coppeliarobotics.com
@@ -28,7 +29,7 @@ import math
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-file_test = open("testfile.txt","w")
+file_test = open("testfile.dat","w")
 def draw_lrf(lrf):
     lrf = np.asarray(lrf)
     fig = plt.figure()
@@ -90,7 +91,7 @@ if clientID!=-1:
     vrep.simxGetStringSignal(clientID, name_hokuyo_data,
                              vrep.simx_opmode_streaming)
     vrep.simxGetIntegerParameter(clientID,vrep.sim_intparam_mouse_x,vrep.simx_opmode_streaming) # Initialize streaming
-    while time.time()-startTime < 10:
+    while time.time()-startTime < 5:
         returnCode,data=vrep.simxGetIntegerParameter(clientID,vrep.sim_intparam_mouse_x,vrep.simx_opmode_buffer) # Try to retrieve the streamed data
         e, lrf_bin = vrep.simxGetStringSignal(clientID, name_hokuyo_data,                                  vrep.simx_opmode_buffer)
         #print ('hola sensor',lrf)
@@ -99,18 +100,26 @@ if clientID!=-1:
             print ('Mouse position x: ',data) # Mouse position x is actualized when the cursor is over V-REP's window
             lrf_raw = vrep.simxUnpackFloats(lrf_bin)
             lrf = np.array(lrf_raw).reshape(-1, 3)
-            magnitud = np.arange(399.000)
-            for i in range (0,399):        
-                magnitud[i]=math.sqrt(lrf[i,0]*lrf[i,0]+lrf[i,1]*lrf[i,1])
-            print ('la magnitud es:',magnitud)
-            magnitud= magnitud.tostring()
-            file_test.write(magnitud)
+            magnitud = np.arange(683)
+            sec, msec = vrep.simxGetPingTime(clientID)
+            print "Ping time: %f" % (sec + msec / 1000.)
+            timesim = int(time.clock()*1000000)
+            timesim=str(timesim)
+            file_test.write(timesim+"0 0 0 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 0 0 0")
+            for i in range (0,682):        
+                magnitud[i]=1000*math.sqrt(lrf[i,0]*lrf[i,0]+lrf[i,1]*lrf[i,1])
+                magnitud[i] = int(magnitud[i])
+                magnitud1= np.array2string(magnitud[i])
+                file_test.write(magnitud1+" ")
+            file_test.write("\n")
+            #print ('la magnitud es:',magnitud)
+            
             #draw_lrf(lrf)
 			#returnCode,Sensor_motor_pos=vrep.simxGetJointPosition(clientID,Sensor_motor,vrep.simx_opmode_blocking)
 			#print('La posicion del motor es:',Sensor_motor_pos)
 			
 				
-        time.sleep(0.05)
+        #time.sleep(0.0005)
 
     # Now send some data to V-REP in a non-blocking fashion:
     vrep.simxAddStatusbarMessage(clientID,'Hello V-REP!',vrep.simx_opmode_oneshot)
