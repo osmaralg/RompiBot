@@ -1,2 +1,0 @@
-import vrep 
-print(vrep)
