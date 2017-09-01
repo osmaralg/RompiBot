@@ -4,7 +4,7 @@ class MainWindow(tk.Frame):
     counter = 0
     def __init__(self, *args, **kwargs):
         tk.Frame.__init__(self, *args, **kwargs)
-        self.button = tk.Button(self, text="Create new window", 
+        self.button = tk.Button(self, text="Avanzar", 
                                 command=self.create_window)
         self.button2 = tk.Button(self, text="Create new window2", 
                                 command=self.create_window)
@@ -23,6 +23,12 @@ class MainWindow(tk.Frame):
         t.wm_title("Window #%s" % self.counter)
         l = tk.Label(t, text="This is window #%s" % self.counter)
         l.pack(side="top", fill="both", expand=True, padx=100, pady=100)
+   # def modify_velocity(self,clientID,handle1,handle2,handle3,handle4,vel1)
+       
+# self.simxSetJointVelocity(clientID,handle1,vel1,self.sim_opmode_blocking)
+ #       self.simxSetJointVelocity(clientID,handle2,vel1,self.sim_opmode_blocking)
+  #      self.simxSetJointVelocity(clientID,handle3,vel1,self.sim_opmode_blocking)
+   #     self.simxSetJointVelocity(clientID,handle4,vel1,self.sim_opmode_blocking)
 
 if __name__ == "__main__":
     root = tk.Tk()
