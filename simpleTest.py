@@ -29,7 +29,9 @@ import math
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+import Tkinter as tk
 file_test = open("testfile.dat","w")
+
 def draw_lrf(lrf):
     lrf = np.asarray(lrf)
     fig = plt.figure()
@@ -60,11 +62,11 @@ clientID=vrep.simxStart('127.0.0.1',19997,True,True,5000,5) # Connect to V-REP
 if clientID!=-1:
     print ('Connected to remote API server')
     # Now try to retrieve data in a blocking fashion (i.e. a service call):
-    res,objs=vrep.simxGetObjects(clientID,vrep.sim_handle_all,vrep.simx_opmode_blocking)
-    returnCode,back_left=vrep.simxGetObjectHandle(clientID,'back_left_motor',vrep.simx_opmode_blocking)	
-    returnCode,back_right=vrep.simxGetObjectHandle(clientID,'back_right_motor',vrep.simx_opmode_blocking)
-    returnCode,front_left=vrep.simxGetObjectHandle(clientID,'front_left_motor',vrep.simx_opmode_blocking)
-    returnCode,front_right=vrep.simxGetObjectHandle(clientID,'front_right_motor',vrep.simx_opmode_blocking)
+    res,objs=vrep.simxGetObjects(clientID,vrep.sim_handle_all, vrep.simx_opmode_blocking)
+    returnCode,back_left=vrep.simxGetObjectHandle(clientID, 'back_left_motor', vrep.simx_opmode_blocking)
+    returnCode,back_right=vrep.simxGetObjectHandle(clientID, 'back_right_motor', vrep.simx_opmode_blocking)
+    returnCode,front_left=vrep.simxGetObjectHandle(clientID, 'front_left_motor', vrep.simx_opmode_blocking)
+    returnCode,front_right=vrep.simxGetObjectHandle(clientID, 'front_right_motor', vrep.simx_opmode_blocking)
   
 
     if returnCode==vrep.simx_return_ok:
@@ -93,9 +95,7 @@ if clientID!=-1:
     vrep.simxGetIntegerParameter(clientID,vrep.sim_intparam_mouse_x,vrep.simx_opmode_streaming) # Initialize streaming
     while time.time()-startTime < 5:
         returnCode,data=vrep.simxGetIntegerParameter(clientID,vrep.sim_intparam_mouse_x,vrep.simx_opmode_buffer) # Try to retrieve the streamed data
-        e, lrf_bin = vrep.simxGetStringSignal(clientID, name_hokuyo_data,                                  vrep.simx_opmode_buffer)
-        #print ('hola sensor',lrf)
-        
+        e, lrf_bin = vrep.simxGetStringSignal(clientID, name_hokuyo_data, vrep.simx_opmode_buffer)
         if returnCode==vrep.simx_return_ok: # After initialization of streaming, it will take a few ms before the first value arrives, so check the return code
             print ('Mouse position x: ',data) # Mouse position x is actualized when the cursor is over V-REP's window
             lrf_raw = vrep.simxUnpackFloats(lrf_bin)
@@ -112,18 +112,8 @@ if clientID!=-1:
                 magnitud1= np.array2string(magnitud[i])
                 file_test.write(magnitud1+" ")
             file_test.write("\n")
-            #print ('la magnitud es:',magnitud)
-            
             #draw_lrf(lrf)
-			#returnCode,Sensor_motor_pos=vrep.simxGetJointPosition(clientID,Sensor_motor,vrep.simx_opmode_blocking)
-			#print('La posicion del motor es:',Sensor_motor_pos)
-			
-				
-        #time.sleep(0.0005)
-
-    # Now send some data to V-REP in a non-blocking fashion:
-    vrep.simxAddStatusbarMessage(clientID,'Hello V-REP!',vrep.simx_opmode_oneshot)
-
+            time.sleep(0.0005)
     # Before closing the connection to V-REP, make sure that the last command sent out had time to arrive. You can guarantee this with (for example):
     vrep.simxGetPingTime(clientID)
     file_test.close()
