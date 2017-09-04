@@ -28,9 +28,14 @@ class Application(Frame):
         self.back_right = IntVar()
         self.front_left = IntVar()
         self.front_right = IntVar()
+        self.name_hokuyo_data = StringVar()
+
         print ('Program started')
         vrep.simxFinish(-1)  # just in case, close all opened connections
+
         clientID = vrep.simxStart('127.0.0.1', 19997, True, True, 5000, 5)  # Connect to V-REP
+
+        print("el clientId es %d", clientID)
         self.clientID.set(clientID)
         if clientID != -1:
             print ('Connected to remote API server')
@@ -40,10 +45,15 @@ class Application(Frame):
             returnCode, back_right = vrep.simxGetObjectHandle(clientID, 'back_right_motor', vrep.simx_opmode_blocking)
             returnCode, front_left = vrep.simxGetObjectHandle(clientID, 'front_left_motor', vrep.simx_opmode_blocking)
             returnCode, front_right = vrep.simxGetObjectHandle(clientID, 'front_right_motor', vrep.simx_opmode_blocking)
+
+            name_hokuyo_data = "hokuyo_data"
+            vrep.simxGetStringSignal(clientID, name_hokuyo_data, vrep.simx_opmode_streaming)
+
             self.back_left.set(back_left)
             self.back_right.set(back_right)
             self.front_left.set(front_left)
             self.front_right.set(front_right)
+
 
             if returnCode == vrep.simx_return_ok:
                 print ('Corrio bien la lectura del handle')
@@ -57,7 +67,6 @@ class Application(Frame):
     def say_hi(self):
         print "hi there, everyone estoy usando variables globales!"
         print ("back right motor handle is",self.back_right.get())
-
     def createWidgets(self):
         self.QUIT = Button(self)         ######## Boton para cerrar el programa ########
         self.QUIT["text"] = "QUIT"
@@ -89,8 +98,6 @@ class Application(Frame):
         self.hi_there2["text"] = "Detener",
         self.hi_there2["command"] = self.setvelocity_stop
         self.hi_there2.pack({"side": "right"})
-
-
     def setvelocity(self):
         import vrep
         velocity = 10
@@ -151,7 +158,51 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, back_right,  velocity, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_right, velocity, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
+
+
+
+def task():
+    import vrep
+    clientID = app.clientID.get()
+    name_hokuyo_data = "hokuyo_data"
+    print("Leyendo string")
+    root.after(6, task)  # reschedule event in 2 seconds
+    #returnCode, data = vrep.simxGetIntegerParameter(clientID, vrep.sim_intparam_mouse_x, vrep.simx_opmode_buffer)  # Try to retrieve the streamed data
+    print("The clientID is:",clientID)
+    e, lrf_bin = vrep.simxGetStringSignal(clientID, name_hokuyo_data, vrep.simx_opmode_buffer)
+    print("this is data:", lrf_bin)
+    #print("this is return code:", returnCode)
+    print("return ok?", vrep.simx_return_ok)
+    #if returnCode == vrep.simx_return_ok:  # After initialization of streaming, it will take a few ms before the first value arrives, so check the return code
+    #    print ('Mouse position x: ', data)  # Mouse position x is actualized when the cursor is over V-REP's window
+    lrf_raw = vrep.simxUnpackFloats(lrf_bin)
+    lrf = np.array(lrf_raw).reshape(-1, 3)
+    magnitud = np.arange(683)
+    sec, msec = vrep.simxGetPingTime(clientID)
+    print "Ping time: %f" % (sec + msec / 1000.)
+    timesim = int(time.clock() * 1000000)
+    timesim = str(timesim)
+    file_test.write(timesim + "0 0 0 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 0 0 0 0")
+    for i in range(0, 682):
+        magnitud[i] = 1000 * math.sqrt(lrf[i, 0] * lrf[i, 0] + lrf[i, 1] * lrf[i, 1])
+        magnitud[i] = int(magnitud[i])
+        magnitud1 = np.array2string(magnitud[i])
+        file_test.write(magnitud1 + " ")
+    file_test.write("\n")
 root = Tk()
 app = Application(master=root)
+root.after(300, task)
 app.mainloop()
+
+
 root.destroy()
+file_test.close()
+import vrep
+# Now close the connection to V-REP:
+vrep.simxFinish(-1)
+
+
+
+
+
+

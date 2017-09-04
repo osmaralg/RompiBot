@@ -1,61 +1,20 @@
-import Tkinter as tk
-import thread
-from time import sleep
-import Queue
+from Tkinter import *
 
-request_queue = Queue.Queue()
-result_queue = Queue.Queue()
+root = Tk()
 
-def submit_to_tkinter(callable, *args, **kwargs):
-    request_queue.put((callable, args, kwargs))
-    return result_queue.get()
+def task():
+    print("hello")
+    root.after(200, task)  # reschedule event in 2 seconds
 
-t = None
-def threadmain():
-    global t
+root.after(200, task)
+root.mainloop()
 
-    def timertick():
-        try:
-            callable, args, kwargs = request_queue.get_nowait()
-        except Queue.Empty:
-            pass
-        else:
-            print "something in queue"
-            retval = callable(*args, **kwargs)
-            result_queue.put(retval)
 
-        t.after(500, timertick)
 
-    t = tk.Tk()
-    t.configure(width=640, height=480)
-    b = tk.Button(text='test', name='button', command=exit)
-    b.place(x=0, y=0)
-    timertick()
-    t.mainloop()
+def after(self, ms, func=None, *args):
+    """Call function once after given time.
 
-def foo():
-    t.title("Hello world")
-
-def bar(button_text):
-    t.children["button"].configure(text=button_text)
-
-def get_button_text():
-    return t.children["button"]["text"]
-
-if __name__ == '__main__':
-    thread.start_new_thread(threadmain, ())
-
-    trigger = 0
-    while 1:
-        trigger += 1
-
-        if trigger == 3:
-            submit_to_tkinter(foo)
-
-        if trigger == 5:
-            submit_to_tkinter(bar, "changed")
-
-        if trigger == 7:
-            print submit_to_tkinter(get_button_text)
-
-        sleep(1)
+    MS specifies the time in milliseconds. FUNC gives the
+    function which shall be called. Additional parameters
+    are given as parameters to the function call.  Return
+    identifier to cancel scheduling with after_cancel."""
