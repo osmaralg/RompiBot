@@ -8,6 +8,7 @@ file_test = open("testfile.dat","w")
 
 
 class Application(Frame):
+
     def __init__(self, master=None):
         try:
             import vrep
@@ -42,7 +43,7 @@ class Application(Frame):
             self.back_left.set(back_left)
             self.back_right.set(back_right)
             self.front_left.set(front_left)
-            self.front_right.set(back_right)
+            self.front_right.set(front_right)
 
             if returnCode == vrep.simx_return_ok:
                 print ('Corrio bien la lectura del handle')
@@ -64,36 +65,92 @@ class Application(Frame):
         self.QUIT["command"] =  self.quit
         self.QUIT.pack({"side": "left"})
 
-        self.hi_there = Button(self) ######## Boton empezar conexion ########
+        self.hi_there = Button(self) ######## Boton mover hacia adelante ########
         self.hi_there["text"] = "Avanzar",
         self.hi_there["command"] = self.setvelocity
         self.hi_there.pack({"side": "left"})
 
-        self.hi_there1 = Button(self)######## Boton mover el carro ########
+        self.hi_there1 = Button(self)######## Boton mover el carro hacia atras ########
         self.hi_there1["text"] = "Atras",
-        self.hi_there1["command"] = self.say_hi
+        self.hi_there1["command"] = self.setvelocity_back
         self.hi_there1.pack({"side": "right"})
 
-        self.hi_there2 = Button(self)######## Boton para imprimir un texto ########
+        self.hi_there2 = Button(self)######## Boton para girar a la derecha####
         self.hi_there2["text"] = "Derecha",
-        self.hi_there2["command"] = self.say_hi
+        self.hi_there2["command"] = self.setvelocity_right
         self.hi_there2.pack({"side": "right"})
 
-        self.hi_there2 = Button(self)  ######## Boton para imprimir un texto ########
+        self.hi_there2 = Button(self)  ######## Boton para girar a la izquierda ########
         self.hi_there2["text"] = "Izquierda",
-        self.hi_there2["command"] = self.say_hi
+        self.hi_there2["command"] = self.setvelocity_left
         self.hi_there2.pack({"side": "right"})
+
+        self.hi_there2 = Button(self)  ######## Boton para detener el carro ########
+        self.hi_there2["text"] = "Detener",
+        self.hi_there2["command"] = self.setvelocity_stop
+        self.hi_there2.pack({"side": "right"})
+
+
     def setvelocity(self):
         import vrep
-        velocity = 100
+        velocity = 10
         clientID = self.clientID.get()
+        back_left = self.back_left.get()
         back_right = self.back_right.get()
         front_left = self.front_left.get()
         front_right = self.front_right.get()
-        vrep.simxSetJointTargetVelocity(clientID, self.back_left.get(), velocity, vrep.simx_opmode_blocking)
-        vrep.simxSetJointTargetVelocity(clientID, back_right, velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, back_left,   velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, back_right,  velocity, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_right, velocity, vrep.simx_opmode_blocking)
-        vrep.simxSetJointTargetVelocity(clientID, front_left, velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
+    def setvelocity_left(self):
+        import vrep
+        velocity = 10
+        clientID = self.clientID.get()
+        back_left = self.back_left.get()
+        back_right = self.back_right.get()
+        front_left = self.front_left.get()
+        front_right = self.front_right.get()
+        vrep.simxSetJointTargetVelocity(clientID, back_left,   -velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, back_right,  velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, front_right, velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, front_left,  -velocity, vrep.simx_opmode_blocking)
+    def setvelocity_right(self):
+        import vrep
+        velocity = 10
+        clientID = self.clientID.get()
+        back_left = self.back_left.get()
+        back_right = self.back_right.get()
+        front_left = self.front_left.get()
+        front_right = self.front_right.get()
+        vrep.simxSetJointTargetVelocity(clientID, back_left,   velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, back_right,  -velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, front_right, -velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
+    def setvelocity_stop(self):
+        import vrep
+        velocity = 0
+        clientID = self.clientID.get()
+        back_left = self.back_left.get()
+        back_right = self.back_right.get()
+        front_left = self.front_left.get()
+        front_right = self.front_right.get()
+        vrep.simxSetJointTargetVelocity(clientID, back_left,   velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, back_right,  velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, front_right, velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
+    def setvelocity_back(self):
+        import vrep
+        velocity = -10
+        clientID = self.clientID.get()
+        back_left = self.back_left.get()
+        back_right = self.back_right.get()
+        front_left = self.front_left.get()
+        front_right = self.front_right.get()
+        vrep.simxSetJointTargetVelocity(clientID, back_left,   velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, back_right,  velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, front_right, velocity, vrep.simx_opmode_blocking)
+        vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
 root = Tk()
 app = Application(master=root)
 app.mainloop()
