@@ -1,3 +1,4 @@
+# coding=utf-8
 from Tkinter import *
 import math
 import time
@@ -5,6 +6,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import Tkinter as tk
 file_test = open("testfile.dat","w") # abrir archivo donde se va a guardar las lecturas del sensor de vrep
+MAP_SIZE_PIXELS         = 500
+MAP_SIZE_METERS         = 10
+LIDAR_DEVICE            = '/dev/ttyACM0'
+
+from breezyslam.algorithms import RMHC_SLAM
+from breezyslam.components import URG04LX as LaserModel
+from breezylidar import URG04LX as Lidar
 
 class Application(Frame):
 
@@ -99,12 +107,12 @@ class Application(Frame):
         self.hi_there2.pack({"side": "right"})
 
         self.hi_there2 = Button(self)  ######## Boton para crear un trayectoria hay que espeficiar punto de partida y meta ########
-        self.hi_there2["text"] = "Crear Trayectoria",
+        self.hi_there2["text"] = "Crear_Trayectoria",
         self.hi_there2["command"] = self.creartrayectoria
         self.hi_there2.pack({"side": "right"})
 
         self.hi_there2 = Button(self)  ######## Boton para seguir dos puntos o una sucesión de puntos ########
-        self.hi_there2["text"] = "Seguir Trayectoria",
+        self.hi_there2["text"] = "Seguir_Trayectoria",
         self.hi_there2["command"] = self.seguir
         self.hi_there2.pack({"side": "right"})
 
