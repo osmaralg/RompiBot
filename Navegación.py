@@ -13,10 +13,13 @@ LIDAR_DEVICE            = '/dev/ttyACM0'
 from breezyslam.algorithms import RMHC_SLAM
 from breezyslam.components import URG04LX as LaserModel
 from breezylidar import URG04LX as Lidar
+from pltslamshow import SlamShow
 
 class Application(Frame):
 
-    def __init__(self, master=None):
+    def __init__(self, master=None):  #Correr esta aplicación cuando se inicializa la ventana FRAME
+
+
         try:
             import vrep
         except:
@@ -217,7 +220,20 @@ class Application(Frame):
 
 
 
-def task(): 
+def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre el scrpit de python y V-REP
+
+    # Connect to Lidar unit
+    # lidar = Lidar(LIDAR_DEVICE)
+
+    # Create an RMHC SLAM object with a laser model and optional robot model
+    slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS)
+
+    # Set up a SLAM display
+    display = SlamShow(MAP_SIZE_PIXELS, MAP_SIZE_METERS * 1000 / MAP_SIZE_PIXELS, 'SLAM')
+
+    # Initialize empty map
+    mapbytes = bytearray(MAP_SIZE_PIXELS * MAP_SIZE_PIXELS)
+
     import vrep
     clientID = app.clientID.get()
     name_hokuyo_data = "hokuyo_data"
@@ -226,25 +242,57 @@ def task():
     #returnCode, data = vrep.simxGetIntegerParameter(clientID, vrep.sim_intparam_mouse_x, vrep.simx_opmode_buffer)  # Try to retrieve the streamed data
     print("The clientID is:",clientID)
     e, lrf_bin = vrep.simxGetStringSignal(clientID, name_hokuyo_data, vrep.simx_opmode_buffer)
-    print("this is data:", lrf_bin)
+    #print("this is data:", lrf_bin)
     #print("this is return code:", returnCode)
     print("return ok?", vrep.simx_return_ok)
     #if returnCode == vrep.simx_return_ok:  # After initialization of streaming, it will take a few ms before the first value arrives, so check the return code
     #    print ('Mouse position x: ', data)  # Mouse position x is actualized when the cursor is over V-REP's window
     lrf_raw = vrep.simxUnpackFloats(lrf_bin)
-    lrf = np.array(lrf_raw).reshape(-1, 3)
+    lrf = np.array(lrf_raw).reshape(-1, 3) #lrf da un vector de 3x683 que contiene un v=[vx vy vz]*683 la distancia vectorial del carro a un objetivo, siendo el carro el origen
     magnitud = np.arange(683)
     sec, msec = vrep.simxGetPingTime(clientID)
     print "Ping time: %f" % (sec + msec / 1000.)
     timesim = int(time.clock() * 1000000)
     timesim = str(timesim)
     file_test.write(timesim + "0 0 0 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 0 0 0 0")
-    for i in range(0, 682):
+    s=""
+    for i in range(0, 683):
         magnitud[i] = 1000 * math.sqrt(lrf[i, 0] * lrf[i, 0] + lrf[i, 1] * lrf[i, 1])
         magnitud[i] = int(magnitud[i])
         magnitud1 = np.array2string(magnitud[i])
         file_test.write(magnitud1 + " ")
+        s = s + magnitud1 + " "
     file_test.write("\n")
+    scans = []
+
+    #print s
+
+    toks = s.split()[0:-1]  # ignore ''
+
+    #print toks
+    lidar = [int(tok) for tok in toks[0:]]
+    lengthlidar=len(lidar)
+    print lengthlidar
+    scans.append(lidar)
+    print(scans)
+
+    slam.update(lidar) #voy aqui convertir la lista de sting a una lista
+
+    # Get current robot position
+    x, y, theta = slam.getpos()
+
+    # Get current map bytes as grayscale
+    slam.getmap(mapbytes)
+
+    display.displayMap(mapbytes)
+
+    display.setPose(x, y, theta)
+
+    # Exit on ESCape
+    key = display.refresh()
+    if key != None and (key & 0x1A):
+        exit(0)
+
 root = Tk()
 app = Application(master=root)
 root.after(300, task) # repetir la función task cada 300 ms 
