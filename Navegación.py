@@ -5,15 +5,28 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 import Tkinter as tk
+import sys
+sys.setrecursionlimit(10000) # 10000 is an example, try with different values
 file_test = open("testfile.dat","w") # abrir archivo donde se va a guardar las lecturas del sensor de vrep
-MAP_SIZE_PIXELS         = 500
-MAP_SIZE_METERS         = 10
+MAP_SIZE_PIXELS         = 300
+MAP_SIZE_METERS         = 30
 LIDAR_DEVICE            = '/dev/ttyACM0'
 
 from breezyslam.algorithms import RMHC_SLAM
 from breezyslam.components import URG04LX as LaserModel
 from breezylidar import URG04LX as Lidar
 from pltslamshow import SlamShow
+
+global slam
+global display
+global mapbytes
+slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS)
+# Set up a SLAM display
+display = SlamShow(MAP_SIZE_PIXELS, MAP_SIZE_METERS * 1000 / MAP_SIZE_PIXELS, 'SLAM')
+# Initialize empty map
+mapbytes = bytearray(MAP_SIZE_PIXELS * MAP_SIZE_PIXELS)
+
+
 
 class Application(Frame):
 
@@ -224,15 +237,10 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
 
     # Connect to Lidar unit
     # lidar = Lidar(LIDAR_DEVICE)
-
     # Create an RMHC SLAM object with a laser model and optional robot model
-    slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS)
 
-    # Set up a SLAM display
-    display = SlamShow(MAP_SIZE_PIXELS, MAP_SIZE_METERS * 1000 / MAP_SIZE_PIXELS, 'SLAM')
 
-    # Initialize empty map
-    mapbytes = bytearray(MAP_SIZE_PIXELS * MAP_SIZE_PIXELS)
+
 
     import vrep
     clientID = app.clientID.get()
@@ -273,8 +281,6 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     lidar = [int(tok) for tok in toks[0:]]
     lengthlidar=len(lidar)
     print lengthlidar
-    scans.append(lidar)
-    print(scans)
 
     slam.update(lidar) #voy aqui convertir la lista de sting a una lista
 
@@ -295,7 +301,7 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
 
 root = Tk()
 app = Application(master=root)
-root.after(300, task) # repetir la función task cada 300 ms 
+root.after(1000, task) # repetir la función task cada 300 ms
 app.mainloop()
 
 
