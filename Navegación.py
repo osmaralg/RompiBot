@@ -153,7 +153,7 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
     def setvelocity_left(self):
         import vrep
-        velocity = 10
+        velocity = 2
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
@@ -165,7 +165,7 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  -velocity, vrep.simx_opmode_blocking)
     def setvelocity_right(self):
         import vrep
-        velocity = 10
+        velocity = 2
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
@@ -201,36 +201,36 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
     def seguir(self):
         import vrep
-        print "seguir trayectoria!!!!!!!!!!!!!!!!!!!!!!!!!"
+        #print "seguir trayectoria!!!!!!!!!!!!!!!!!!!!!!!!!"
         x, y, theta = slam.getpos()
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
         front_left = self.front_left.get()
         front_right = self.front_right.get()
-        root.after(100,self.seguir)
+        root.after(5,self.seguir)
         x_actual=x
         y_actual=y
         x_meta=15000
         y_meta=10000
-        k=.8 #ganancia de velocidad
+        k=.08 #ganancia de velocidad
         theta_meta=math.atan2((y_meta-y_actual+.00001),(x_meta-x_actual))
 
         errotheta=math.cos(theta_meta)-math.cos(theta)
-        v=k*errotheta
+        v=k*math.fabs(errotheta)
         velocity_left=-v
         velocity_right=v
         print "error theta es: ",errotheta
         
-        if errotheta<.1:
-            if errotheta>-.1:
+        if errotheta<.2:
+            if errotheta>-.2:
                 v=math.sqrt((x_meta-x_actual)*(x_meta-x_actual)+(y_meta-y_actual)*(y_meta-y_actual))
                 velocity_left=v*k*.01
                 velocity_right=v*k*.01
         error_pos = math.sqrt((x_meta-x_actual)*(x_meta-x_actual)+(y_meta-y_actual)*(y_meta-y_actual))
-        print "error en posición es: ",error_pos
-	print "velocidad left: ", velocity_left
-	print "velocidad right: ", velocity_right
+        #print "error en posición es: ",error_pos
+	#print "velocidad left: ", velocity_left
+	#print "velocidad right: ", velocity_right
         vrep.simxSetJointTargetVelocity(clientID, back_left,   velocity_left, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity_left, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, back_right,  velocity_right, vrep.simx_opmode_blocking)
