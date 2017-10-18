@@ -20,11 +20,13 @@ from pltslamshow import SlamShow
 global slam
 global display
 global mapbytes
+
 slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS)
 # Set up a SLAM display
 display = SlamShow(MAP_SIZE_PIXELS, MAP_SIZE_METERS * 1000 / MAP_SIZE_PIXELS, 'SLAM')
 # Initialize empty map
 mapbytes = bytearray(MAP_SIZE_PIXELS * MAP_SIZE_PIXELS)
+
 
 
 
@@ -153,7 +155,7 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
     def setvelocity_left(self):
         import vrep
-        velocity = 2
+        velocity = 10
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
@@ -165,7 +167,7 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  -velocity, vrep.simx_opmode_blocking)
     def setvelocity_right(self):
         import vrep
-        velocity = 2
+        velocity = 10
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
@@ -202,31 +204,46 @@ class Application(Frame):
     def seguir(self):
         import vrep
         #print "seguir trayectoria!!!!!!!!!!!!!!!!!!!!!!!!!"
-        x, y, theta = slam.getpos()
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
         front_left = self.front_left.get()
         front_right = self.front_right.get()
-        root.after(5,self.seguir)
+	
         x_actual=x
         y_actual=y
+        theta_actual=math.radians(theta+270)
+	print "x actual",x
+	print "y actual",y 
+	print "theta actual es", theta_actual
+	
+	
         x_meta=15000
-        y_meta=10000
-        k=.08 #ganancia de velocidad
+        y_meta=14000
+        k=1 #ganancia de velocidad
+	
         theta_meta=math.atan2((y_meta-y_actual+.00001),(x_meta-x_actual))
-
-        errotheta=math.cos(theta_meta)-math.cos(theta)
-        v=k*math.fabs(errotheta)
+        print "theta meta es", theta_meta
+        errotheta=theta_meta-theta_actual
+        v=k*errotheta
         velocity_left=-v
         velocity_right=v
         print "error theta es: ",errotheta
+	print "velocity es :", v
         
-        if errotheta<.2:
-            if errotheta>-.2:
-                v=math.sqrt((x_meta-x_actual)*(x_meta-x_actual)+(y_meta-y_actual)*(y_meta-y_actual))
-                velocity_left=v*k*.01
-                velocity_right=v*k*.01
+        if errotheta< .05:
+            if errotheta> -.05:
+                error_pos=math.sqrt((x_meta-x_actual)*(x_meta-x_actual)+(y_meta-y_actual)*(y_meta-y_actual))
+		print "error en pos es:", error_pos
+		if v>10:
+		    v=10;
+	        k=.01
+                velocity_left=k*error_pos
+                velocity_right=k*error_pos
+		if velocity_left > 10
+			velocity_left=10
+		if velocity_right
+		
         error_pos = math.sqrt((x_meta-x_actual)*(x_meta-x_actual)+(y_meta-y_actual)*(y_meta-y_actual))
         #print "error en posición es: ",error_pos
 	#print "velocidad left: ", velocity_left
@@ -235,6 +252,10 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity_left, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, back_right,  velocity_right, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_right, velocity_right, vrep.simx_opmode_blocking)
+        if error_pos > 200
+        	root.after(80,self.seguir)
+	
+	
         
     def creartrayectoria(self):
         x_inicial=0
@@ -258,7 +279,7 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     clientID = app.clientID.get()
     name_hokuyo_data = "hokuyo_data"
     print("Leyendo string")
-    root.after(6, task)  # reschedule event in 2 seconds
+    root.after(80, task)  # reschedule event in 2 seconds
     #returnCode, data = vrep.simxGetIntegerParameter(clientID, vrep.sim_intparam_mouse_x, vrep.simx_opmode_buffer)  # Try to retrieve the streamed data
     print("The clientID is:",clientID)
     e, lrf_bin = vrep.simxGetStringSignal(clientID, name_hokuyo_data, vrep.simx_opmode_buffer)
@@ -272,11 +293,13 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     print "Ping time: %f" % (sec + msec / 1000.)
     timesim = int(time.clock() * 1000000)
     timesim = str(timesim)
-    file_test.write(timesim + "0 0 0 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 0 0 0 0")
+    file_test.write(timesim + "0 0 0 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 0 0 0")
     s=""
     for i in range(0, 683):
         magnitud[i] = 1000 * math.sqrt(lrf[i, 0] * lrf[i, 0] + lrf[i, 1] * lrf[i, 1])
         magnitud[i] = int(magnitud[i])
+        if magnitud[i]>4500:
+            magnitud[i]=0
         magnitud1 = np.array2string(magnitud[i])
         file_test.write(magnitud1 + " ")
         s = s + magnitud1 + " "
@@ -293,17 +316,19 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     print lengthlidar
 
     slam.update(lidar) #voy aqui convertir la lista de sting a una lista
-
+    global x
+    global y
+    global theta
     # Get current robot position
     x, y, theta = slam.getpos()
-
+    print "theta is: ", theta
     # Get current map bytes as grayscale
     slam.getmap(mapbytes)
 
     display.displayMap(mapbytes)
 
     display.setPose(x, y, theta)
-
+    
     # Exit on ESCape
     key = display.refresh()
     if key != None and (key & 0x1A):
