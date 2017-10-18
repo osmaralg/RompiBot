@@ -6,26 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import Tkinter as tk
 import sys
-from sdk import *
-sys.setrecursionlimit(10000) # 10000 is an example, try with different values
+
 file_test = open("testfile.dat","w") # abrir archivo donde se va a guardar las lecturas del sensor de vrep
-MAP_SIZE_PIXELS         = 300
-MAP_SIZE_METERS         = 30
-LIDAR_DEVICE            = '/dev/ttyACM0'
-
-from breezyslam.algorithms import RMHC_SLAM
-from breezyslam.components import RPLidar as LaserModel
-#from breezylidar import URG04LX as Lidar
-from pltslamshow import SlamShow
-
-global slam
-global display
-global mapbytes
-slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS)
-# Set up a SLAM display
-display = SlamShow(MAP_SIZE_PIXELS, MAP_SIZE_METERS * 1000 / MAP_SIZE_PIXELS, 'SLAM')
-# Initialize empty map
-mapbytes = bytearray(MAP_SIZE_PIXELS * MAP_SIZE_PIXELS)
 
 
 
@@ -247,7 +229,7 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     clientID = app.clientID.get()
     name_hokuyo_data = "hokuyo_data"
     print("Leyendo string")
-    root.after(6, task)  # reschedule event in 2 seconds
+    root.after(80, task)  # reschedule event in 2 seconds
     #returnCode, data = vrep.simxGetIntegerParameter(clientID, vrep.sim_intparam_mouse_x, vrep.simx_opmode_buffer)  # Try to retrieve the streamed data
     print("The clientID is:",clientID)
     e, lrf_bin = vrep.simxGetStringSignal(clientID, name_hokuyo_data, vrep.simx_opmode_buffer)
@@ -263,7 +245,7 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     print "Ping time: %f" % (sec + msec / 1000.)
     timesim = int(time.clock() * 1000000)
     timesim = str(timesim)
-    file_test.write(timesim + "0 0 0 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 0 0 0 0")
+    file_test.write(timesim + "0 0 0 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 0 0 0")
     s=""
     for i in range(0, 683):
         magnitud[i] = 1000 * math.sqrt(lrf[i, 0] * lrf[i, 0] + lrf[i, 1] * lrf[i, 1])
@@ -283,22 +265,9 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     lengthlidar=len(lidar)
     print lengthlidar
 
-    slam.update(lidar) #voy aqui convertir la lista de sting a una lista
+    
 
-    # Get current robot position
-    x, y, theta = slam.getpos()
 
-    # Get current map bytes as grayscale
-    slam.getmap(mapbytes)
-
-    display.displayMap(mapbytes)
-
-    display.setPose(x, y, theta)
-
-    # Exit on ESCape
-    key = display.refresh()
-    if key != None and (key & 0x1A):
-        exit(0)
 
 root = Tk()
 app = Application(master=root)
