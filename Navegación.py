@@ -14,12 +14,16 @@ MAP_SIZE_METERS         = 30
 
 from breezyslam.algorithms import RMHC_SLAM
 from breezyslam.components import URG04LX as LaserModel
+from rompibot import RompiBot
 #from breezylidar import URG04LX as Lidar
 from pltslamshow import SlamShow
 
 global slam
 global display
 global mapbytes
+global robot
+robot = RompiBot()
+
 
 slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS)
 # Set up a SLAM display
@@ -213,13 +217,13 @@ class Application(Frame):
         x_actual=x
         y_actual=y
         theta_actual=math.radians(theta+270)
-	print "x actual",x
+        print "x actual",x
 	print "y actual",y 
 	print "theta actual es", theta_actual
 	
 	
-        x_meta=15000
-        y_meta=14000
+        x_meta=16000
+        y_meta=15000
         k=1 #ganancia de velocidad
 	
         theta_meta=math.atan2((y_meta-y_actual+.00001),(x_meta-x_actual))
@@ -240,9 +244,10 @@ class Application(Frame):
 	        k=.01
                 velocity_left=k*error_pos
                 velocity_right=k*error_pos
-		if velocity_left > 10
+		if velocity_left > 10:
 			velocity_left=10
-		if velocity_right
+		if velocity_right>10:
+			velocity_right=10;
 		
         error_pos = math.sqrt((x_meta-x_actual)*(x_meta-x_actual)+(y_meta-y_actual)*(y_meta-y_actual))
         #print "error en posición es: ",error_pos
@@ -252,8 +257,10 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity_left, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, back_right,  velocity_right, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_right, velocity_right, vrep.simx_opmode_blocking)
-        if error_pos > 200
+        if error_pos > 150:
         	root.after(80,self.seguir)
+        else:
+            self.setvelocity_stop()
 	
 	
         
@@ -274,7 +281,6 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
 
 
 
-
     import vrep
     clientID = app.clientID.get()
     name_hokuyo_data = "hokuyo_data"
@@ -282,7 +288,13 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     root.after(80, task)  # reschedule event in 2 seconds
     #returnCode, data = vrep.simxGetIntegerParameter(clientID, vrep.sim_intparam_mouse_x, vrep.simx_opmode_buffer)  # Try to retrieve the streamed data
     print("The clientID is:",clientID)
+    _, back_left = vrep.simxGetObjectHandle(clientID, 'back_left_motor', vrep.simx_opmode_blocking)
+    _, back_right = vrep.simxGetObjectHandle(clientID, 'back_right_motor', vrep.simx_opmode_blocking)
     e, lrf_bin = vrep.simxGetStringSignal(clientID, name_hokuyo_data, vrep.simx_opmode_buffer)
+    _,pos_left = vrep.simxGetJointPosition(clientID,back_left,vrep.simx_opmode_blocking)
+    _,pos_right = vrep.simxGetJointPosition(clientID,back_right,vrep.simx_opmode_blocking)
+
+
     print("return ok?", vrep.simx_return_ok)
     #if returnCode == vrep.simx_return_ok:  # After initialization of streaming, it will take a few ms before the first value arrives, so check the return code
     #    print ('Mouse position x: ', data)  # Mouse position x is actualized when the cursor is over V-REP's window
@@ -291,9 +303,20 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     magnitud = np.arange(683)
     sec, msec = vrep.simxGetPingTime(clientID)
     print "Ping time: %f" % (sec + msec / 1000.)
-    timesim = int(time.clock() * 1000000)
+    timesim = int(time.time())
+
+    pos_left = math.degrees(pos_left)
+    pos_right = math.degrees(pos_right)
+
+    print "pos left is:", pos_left
+    print "pos right is:", pos_right
+
+    odometries  = [timesim,pos_right,pos_left]
+    print odometries
     timesim = str(timesim)
-    file_test.write(timesim + "0 0 0 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 0 0 0")
+    pos_right = str(pos_right)
+    pos_left = str(pos_left)
+    file_test.write(timesim +" "+pos_left+" "+pos_right+"0 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 0 0 0")
     s=""
     for i in range(0, 683):
         magnitud[i] = 1000 * math.sqrt(lrf[i, 0] * lrf[i, 0] + lrf[i, 1] * lrf[i, 1])
@@ -309,13 +332,12 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     #print s
 
     toks = s.split()[0:-1]  # ignore ''
-
     #print toks
     lidar = [int(tok) for tok in toks[0:]]
     lengthlidar=len(lidar)
     print lengthlidar
-
-    slam.update(lidar) #voy aqui convertir la lista de sting a una lista
+    dxy,dtheta,dt =robot.computeVelocities(odometries)
+    slam.update(lidar,(dxy,dtheta,dt)) #voy aqui convertir la lista de sting a una lista
     global x
     global y
     global theta
