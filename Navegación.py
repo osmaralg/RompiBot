@@ -22,6 +22,7 @@ global slam
 global display
 global mapbytes
 global robot
+
 robot = RompiBot()
 
 
@@ -99,6 +100,12 @@ class Application(Frame):
             vrep.simxSetJointTargetVelocity(clientID, back_right, velocity, vrep.simx_opmode_blocking)
             vrep.simxSetJointTargetVelocity(clientID, front_right, velocity, vrep.simx_opmode_blocking)
             vrep.simxSetJointTargetVelocity(clientID, front_left, velocity, vrep.simx_opmode_blocking)
+            global left_inicial
+            global right_inicial
+            _,left_inicial = vrep.simxGetJointPosition(clientID,back_left,vrep.simx_opmode_blocking)
+            _,right_inicial = vrep.simxGetJointPosition(clientID,back_right,vrep.simx_opmode_blocking)
+            left_inicial = math.degrees(left_inicial)
+            right_inicial = math.degrees(right_inicial)
 
     def say_hi(self):
         print "hi there, everyone estoy usando variables globales!"
@@ -147,7 +154,7 @@ class Application(Frame):
 
     def setvelocity(self):
         import vrep
-        velocity = 10
+        velocity = 2
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
@@ -159,7 +166,7 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
     def setvelocity_left(self):
         import vrep
-        velocity = 10
+        velocity = 2
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
@@ -171,7 +178,7 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  -velocity, vrep.simx_opmode_blocking)
     def setvelocity_right(self):
         import vrep
-        velocity = 10
+        velocity = 2
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
@@ -195,7 +202,7 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
     def setvelocity_back(self):
         import vrep
-        velocity = -10
+        velocity = -2
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
@@ -205,6 +212,8 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, back_right,  velocity, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_right, velocity, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
+
+
     def seguir(self):
         import vrep
         #print "seguir trayectoria!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -218,8 +227,8 @@ class Application(Frame):
         y_actual=y
         theta_actual=math.radians(theta+270)
         print "x actual",x
-	print "y actual",y 
-	print "theta actual es", theta_actual
+        print "y actual",y
+        print "theta actual es", theta_actual
 	
 	
         x_meta=16000
@@ -228,29 +237,33 @@ class Application(Frame):
 	
         theta_meta=math.atan2((y_meta-y_actual+.00001),(x_meta-x_actual))
         print "theta meta es", theta_meta
-        errotheta=theta_meta-theta_actual
+        errotheta=math.cos(theta_meta)-math.cos(theta_actual)
         v=k*errotheta
-        velocity_left=-v
-        velocity_right=v
-        print "error theta es: ",errotheta
-	print "velocity es :", v
-        
-        if errotheta< .05:
-            if errotheta> -.05:
-                error_pos=math.sqrt((x_meta-x_actual)*(x_meta-x_actual)+(y_meta-y_actual)*(y_meta-y_actual))
-		print "error en pos es:", error_pos
-		if v>10:
-		    v=10;
-	        k=.01
+        velocity_left=v
+        velocity_right=-v
+
+        error_pos = math.sqrt((x_meta - x_actual) * (x_meta - x_actual) + (y_meta - y_actual) * (y_meta - y_actual))
+
+        if errotheta< .1:
+            if errotheta> -.1:
+
+                print "error en pos es:", error_pos
                 velocity_left=k*error_pos
                 velocity_right=k*error_pos
-		if velocity_left > 10:
-			velocity_left=10
-		if velocity_right>10:
-			velocity_right=10;
+        limit = .3
+        if velocity_left > limit:
+            velocity_left=limit
+
+        if velocity_left<-limit:
+            velocity_left=-limit
+        if velocity_right>limit:
+            velocity_right=limit
+        if velocity_right<-limit:
+            velocity_right=-limit
+        print "error theta es: ", errotheta
+        print "velocity es :", velocity_right
 		
-        error_pos = math.sqrt((x_meta-x_actual)*(x_meta-x_actual)+(y_meta-y_actual)*(y_meta-y_actual))
-        #print "error en posición es: ",error_pos
+
 	#print "velocidad left: ", velocity_left
 	#print "velocidad right: ", velocity_right
         vrep.simxSetJointTargetVelocity(clientID, back_left,   velocity_left, vrep.simx_opmode_blocking)
@@ -285,7 +298,7 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     clientID = app.clientID.get()
     name_hokuyo_data = "hokuyo_data"
     print("Leyendo string")
-    root.after(80, task)  # reschedule event in 2 seconds
+
     #returnCode, data = vrep.simxGetIntegerParameter(clientID, vrep.sim_intparam_mouse_x, vrep.simx_opmode_buffer)  # Try to retrieve the streamed data
     print("The clientID is:",clientID)
     _, back_left = vrep.simxGetObjectHandle(clientID, 'back_left_motor', vrep.simx_opmode_blocking)
@@ -305,11 +318,17 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     print "Ping time: %f" % (sec + msec / 1000.)
     timesim = int(time.time())
 
-    pos_left = math.degrees(pos_left)
+    pos_left= -math.degrees(pos_left)
     pos_right = math.degrees(pos_right)
+    if(pos_left<0):
+        pos_left=pos_left+360
+    if(pos_right<0):
+        pos_right=pos_right+360
+
 
     print "pos left is:", pos_left
     print "pos right is:", pos_right
+
 
     odometries  = [timesim,pos_right,pos_left]
     print odometries
@@ -355,6 +374,7 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     key = display.refresh()
     if key != None and (key & 0x1A):
         exit(0)
+    root.after(1, task)  # reschedule event in 1 ms
 
 root = Tk()
 app = Application(master=root)
