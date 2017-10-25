@@ -26,7 +26,7 @@ global robot
 robot = RompiBot()
 
 
-slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS)
+slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS,1)
 # Set up a SLAM display
 display = SlamShow(MAP_SIZE_PIXELS, MAP_SIZE_METERS * 1000 / MAP_SIZE_PIXELS, 'SLAM')
 # Initialize empty map
@@ -78,7 +78,7 @@ class Application(Frame):
 
             name_hokuyo_data = "hokuyo_data"
             vrep.simxGetStringSignal(clientID, name_hokuyo_data, vrep.simx_opmode_streaming)
-
+            _, simtime = vrep.simxGetFloatSignal(clientID, "mySimulationTime", vrep.simx_opmode_streaming)
             self.back_left.set(back_left)
             self.back_right.set(back_right)
             self.front_left.set(front_left)
@@ -152,6 +152,11 @@ class Application(Frame):
         self.hi_there2["command"] = self.seguir
         self.hi_there2.pack({"side": "right"})
 
+        self.hi_there2 = Button(self)  ######## Boton para seguir dos puntos o una sucesión de puntos ########
+        self.hi_there2["text"] = "Explorar",
+        self.hi_there2["command"] = self.navegar
+        self.hi_there2.pack({"side": "right"})
+
     def setvelocity(self):
         import vrep
         velocity = 2
@@ -212,8 +217,6 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, back_right,  velocity, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_right, velocity, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
-
-
     def seguir(self):
         import vrep
         #print "seguir trayectoria!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -225,22 +228,29 @@ class Application(Frame):
 	
         x_actual=x
         y_actual=y
-        theta_actual=math.radians(theta+270)
+        theta1 = theta
+
+        division = theta / 360
+        theta1 = theta - math.floor(division)*360
+        theta_actual=math.radians(theta1)
         print "x actual",x
         print "y actual",y
-        print "theta actual es", theta_actual
-	
+        print "theta actual es radianes", theta_actual
+        print "theta actual es en grados", theta1
+
+
 	
         x_meta=16000
         y_meta=15000
         k=1 #ganancia de velocidad
 	
-        theta_meta=math.atan2((y_meta-y_actual+.00001),(x_meta-x_actual))
-        print "theta meta es", theta_meta
-        errotheta=math.cos(theta_meta)-math.cos(theta_actual)
+        theta_meta=math.atan2((y_meta-y_actual+.00001),(x_meta-x_actual))+math.pi/2 # -menos posicion inicial
+        print "theta meta es en radianes", theta_meta
+        print "theta meta es en grados", math.degrees(theta_meta    )
+        errotheta=theta_meta-theta_actual
         v=k*errotheta
-        velocity_left=v
-        velocity_right=-v
+        velocity_left=-v
+        velocity_right=v
 
         error_pos = math.sqrt((x_meta - x_actual) * (x_meta - x_actual) + (y_meta - y_actual) * (y_meta - y_actual))
 
@@ -250,7 +260,7 @@ class Application(Frame):
                 print "error en pos es:", error_pos
                 velocity_left=k*error_pos
                 velocity_right=k*error_pos
-        limit = .3
+        limit = .2
         if velocity_left > limit:
             velocity_left=limit
 
@@ -274,9 +284,6 @@ class Application(Frame):
         	root.after(80,self.seguir)
         else:
             self.setvelocity_stop()
-	
-	
-        
     def creartrayectoria(self):
         x_inicial=0
         y_incial=0
@@ -284,7 +291,19 @@ class Application(Frame):
         y_actual=0
         x_meta=200
 
-    # calidad del mapa, anchura del hoyo  calidad del mapa = persistencia del mapa que tan rapido cambio de no hay obstaculo a si hay obstaculo, numero maximo de iteraciones, aumentando el numero de iteraciones, RMHC 
+    # calidad del mapa, anchura del hoyo  calidad del mapa = persistencia del mapa que tan rapido cambio de no hay obstaculo a si hay obstaculo, numero maximo de iteraciones, aumentando el numero de iteraciones, RMHC
+
+    def navegar(self):
+
+        print magnitud[3]
+        if magnitud[2]>3000:
+            self.setvelocity()
+
+        print "estoy navegando"
+        time.sleep(3)
+        root.after(1000,self.navegar())
+
+
 
 def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre el scrpit de python y V-REP
 
@@ -306,18 +325,18 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     e, lrf_bin = vrep.simxGetStringSignal(clientID, name_hokuyo_data, vrep.simx_opmode_buffer)
     _,pos_left = vrep.simxGetJointPosition(clientID,back_left,vrep.simx_opmode_blocking)
     _,pos_right = vrep.simxGetJointPosition(clientID,back_right,vrep.simx_opmode_blocking)
-
-
+    _, simtime = vrep.simxGetFloatSignal(clientID, "mySimulationTime", vrep.simx_opmode_buffer)
+    print "Simulation time from Vrep is:", simtime
     print("return ok?", vrep.simx_return_ok)
     #if returnCode == vrep.simx_return_ok:  # After initialization of streaming, it will take a few ms before the first value arrives, so check the return code
     #    print ('Mouse position x: ', data)  # Mouse position x is actualized when the cursor is over V-REP's window
     lrf_raw = vrep.simxUnpackFloats(lrf_bin)
     lrf = np.array(lrf_raw).reshape(-1, 3) #lrf da un vector de 3x683 que contiene un v=[vx vy vz]*683 la distancia vectorial del carro a un objetivo, siendo el carro el origen
+    global magnitud
     magnitud = np.arange(683)
     sec, msec = vrep.simxGetPingTime(clientID)
     print "Ping time: %f" % (sec + msec / 1000.)
-    timesim = int(time.time())
-
+    timesim=simtime
     pos_left= -math.degrees(pos_left)
     pos_right = math.degrees(pos_right)
     if(pos_left<0):
@@ -374,7 +393,7 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     key = display.refresh()
     if key != None and (key & 0x1A):
         exit(0)
-    root.after(1, task)  # reschedule event in 1 ms
+    root.after(10, task)  # reschedule event in 1 ms
 
 root = Tk()
 app = Application(master=root)
