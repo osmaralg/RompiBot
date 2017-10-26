@@ -23,10 +23,11 @@ global display
 global mapbytes
 global robot
 
+
 robot = RompiBot()
 
 
-slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS,1)
+slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS,5)
 # Set up a SLAM display
 display = SlamShow(MAP_SIZE_PIXELS, MAP_SIZE_METERS * 1000 / MAP_SIZE_PIXELS, 'SLAM')
 # Initialize empty map
@@ -59,11 +60,12 @@ class Application(Frame):
         self.front_left = IntVar()
         self.front_right = IntVar()
         self.name_hokuyo_data = StringVar()
-
+        self.flag = IntVar()
+        flag = 1
         print ('Program started')
         vrep.simxFinish(-1)  # just in case, close all opened connections
 
-        clientID = vrep.simxStart('127.0.0.1', 19997, True, True, 5000, 5)  # Connect to V-REP
+        clientID = vrep.simxStart('127.0.0.1', 19997, True, True, 5000, 10)  # Connect to V-REP
 
         print("el clientId es %d", clientID)
         self.clientID.set(clientID)
@@ -83,6 +85,7 @@ class Application(Frame):
             self.back_right.set(back_right)
             self.front_left.set(front_left)
             self.front_right.set(front_right)
+            self.flag.set(flag)
 
 
             if returnCode == vrep.simx_return_ok:
@@ -106,7 +109,6 @@ class Application(Frame):
             _,right_inicial = vrep.simxGetJointPosition(clientID,back_right,vrep.simx_opmode_blocking)
             left_inicial = math.degrees(left_inicial)
             right_inicial = math.degrees(right_inicial)
-
     def say_hi(self):
         print "hi there, everyone estoy usando variables globales!"
         print ("back right motor handle is",self.back_right.get())
@@ -156,7 +158,6 @@ class Application(Frame):
         self.hi_there2["text"] = "Explorar",
         self.hi_there2["command"] = self.navegar
         self.hi_there2.pack({"side": "right"})
-
     def setvelocity(self):
         import vrep
         velocity = 2
@@ -171,7 +172,7 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
     def setvelocity_left(self):
         import vrep
-        velocity = 2
+        velocity = .2
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
@@ -183,7 +184,7 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  -velocity, vrep.simx_opmode_blocking)
     def setvelocity_right(self):
         import vrep
-        velocity = 2
+        velocity = .2
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
@@ -240,13 +241,13 @@ class Application(Frame):
 
 
 	
-        x_meta=16000
-        y_meta=15000
+        x_meta=15000
+        y_meta=19000
         k=1 #ganancia de velocidad
 	
         theta_meta=math.atan2((y_meta-y_actual+.00001),(x_meta-x_actual))+math.pi/2 # -menos posicion inicial
         print "theta meta es en radianes", theta_meta
-        print "theta meta es en grados", math.degrees(theta_meta    )
+        print "theta meta es en grados", math.degrees(theta_meta)
         errotheta=theta_meta-theta_actual
         v=k*errotheta
         velocity_left=-v
@@ -260,16 +261,24 @@ class Application(Frame):
                 print "error en pos es:", error_pos
                 velocity_left=k*error_pos
                 velocity_right=k*error_pos
-        limit = .2
+        for i in range(165,175):
+            if magnitud[i]<1000:
+                print "hay que girar"
+
+
+
+        limit = 1
         if velocity_left > limit:
             velocity_left=limit
 
-        if velocity_left<-limit:
-            velocity_left=-limit
+        if velocity_left<-.2:
+            velocity_left=-.2
+            velocity_right=.2
         if velocity_right>limit:
             velocity_right=limit
-        if velocity_right<-limit:
-            velocity_right=-limit
+        if velocity_right<-.2:
+            velocity_right=-.2
+            velocity_left=.2
         print "error theta es: ", errotheta
         print "velocity es :", velocity_right
 		
@@ -294,14 +303,20 @@ class Application(Frame):
     # calidad del mapa, anchura del hoyo  calidad del mapa = persistencia del mapa que tan rapido cambio de no hay obstaculo a si hay obstaculo, numero maximo de iteraciones, aumentando el numero de iteraciones, RMHC
 
     def navegar(self):
+        flag = self.flag.get()
+        print flag
+        print magnitud[171]
 
-        print magnitud[3]
-        if magnitud[2]>3000:
+        if magnitud[171]==0:
             self.setvelocity()
-
+        if magnitud[171]>2000:
+            print "hay un obstaculo justo al frente"
+            self.setvelocity_right()
         print "estoy navegando"
-        time.sleep(3)
-        root.after(1000,self.navegar())
+        if flag ==1:
+            time.sleep(1)
+            self.flag.set(0)
+        root.after(100,self.navegar)
 
 
 
@@ -359,8 +374,9 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     for i in range(0, 683):
         magnitud[i] = 1000 * math.sqrt(lrf[i, 0] * lrf[i, 0] + lrf[i, 1] * lrf[i, 1])
         magnitud[i] = int(magnitud[i])
-        if magnitud[i]>4500:
+        if magnitud[i]>5700:
             magnitud[i]=0
+        #print magnitud[i]
         magnitud1 = np.array2string(magnitud[i])
         file_test.write(magnitud1 + " ")
         s = s + magnitud1 + " "
@@ -393,7 +409,7 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     key = display.refresh()
     if key != None and (key & 0x1A):
         exit(0)
-    root.after(10, task)  # reschedule event in 1 ms
+    root.after(1, task)  # reschedule event in 1 ms
 
 root = Tk()
 app = Application(master=root)

@@ -15,27 +15,29 @@ for image_path in glob.glob("/home/osmaralg/Desktop/RompiBot/oficina.png"):
 
 png = []
 for image_path in glob.glob("/home/osmaralg/Desktop/RompiBot/oficina.png"):
-    png.append(misc.imread(image_path))    
+    png.append(misc.imread(image_path))
 
 im = np.asarray(png)
 
 ocupado = []
 print 'Importing done...', im.shape
 
-print im 
+print im
 
 for i in range(0,800):
     for j in range(0,800):
-        if im[0,i,j]<128:
+        if im[0,i,j]<125:
             im[0,i,j]=1
             istr=str(i)
             jstr=str(j)
-            dos = istr+jstr
-            coordenada = [istr,jstr]
+
+            coordenada = istr,jstr,1
             ocupado.append(coordenada)
         else:
             im[0,i,j]=0
+            #print "espacio libre ",i,j
 
-matriz = np.asarray(ocupado)
 
-print "Ocupado:", matriz
+size = len(ocupado)
+print size
+
