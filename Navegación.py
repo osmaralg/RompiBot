@@ -6,9 +6,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import Tkinter as tk
 import sys
+
+
+
+
+
+
+
 sys.setrecursionlimit(10000) # 10000 is an example, try with different values
 file_test = open("testfile.dat","w") # abrir archivo donde se va a guardar las lecturas del sensor de vrep
-MAP_SIZE_PIXELS         = 300
+MAP_SIZE_PIXELS         = 800
 MAP_SIZE_METERS         = 30
 
 
@@ -17,17 +24,19 @@ from breezyslam.components import URG04LX as LaserModel
 from rompibot import RompiBot
 #from breezylidar import URG04LX as Lidar
 from pltslamshow import SlamShow
+from PIL import Image
 
 global slam
 global display
 global mapbytes
 global robot
+global obstacleList
 
 
 robot = RompiBot()
 
 
-slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS,5)
+slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS,10)
 # Set up a SLAM display
 display = SlamShow(MAP_SIZE_PIXELS, MAP_SIZE_METERS * 1000 / MAP_SIZE_PIXELS, 'SLAM')
 # Initialize empty map
@@ -60,12 +69,14 @@ class Application(Frame):
         self.front_left = IntVar()
         self.front_right = IntVar()
         self.name_hokuyo_data = StringVar()
-        self.flag = IntVar()
+        self.flag = IntVar()   # Variable para que la primera vez que se llame navegar espere 1 s despues cada 100 ms
         flag = 1
+        self.flag2 = IntVar() # Variable para detener la navegación y cambiar a manual
+        flag2 = 1
         print ('Program started')
         vrep.simxFinish(-1)  # just in case, close all opened connections
 
-        clientID = vrep.simxStart('127.0.0.1', 19997, True, True, 5000, 10)  # Connect to V-REP
+        clientID = vrep.simxStart('127.0.0.1', 19997, True, True, 5000, 30)  # Connect to V-REP
 
         print("el clientId es %d", clientID)
         self.clientID.set(clientID)
@@ -86,6 +97,7 @@ class Application(Frame):
             self.front_left.set(front_left)
             self.front_right.set(front_right)
             self.flag.set(flag)
+            self.flag2.set(flag2)
 
 
             if returnCode == vrep.simx_return_ok:
@@ -160,7 +172,8 @@ class Application(Frame):
         self.hi_there2.pack({"side": "right"})
     def setvelocity(self):
         import vrep
-        velocity = 2
+        self.flag2.set(1)
+        velocity = 1
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
@@ -196,6 +209,8 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
     def setvelocity_stop(self):
         import vrep
+        self.flag2.set(0)
+        self.flag1.set(1)
         velocity = 0
         clientID = self.clientID.get()
         back_left = self.back_left.get()
@@ -206,9 +221,10 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, back_right,  velocity, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_right, velocity, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
+
     def setvelocity_back(self):
         import vrep
-        velocity = -2
+        velocity = -1
         clientID = self.clientID.get()
         back_left = self.back_left.get()
         back_right = self.back_right.get()
@@ -294,16 +310,16 @@ class Application(Frame):
         else:
             self.setvelocity_stop()
     def creartrayectoria(self):
-        x_inicial=0
-        y_incial=0
-        x_actual=0
-        y_actual=0
-        x_meta=200
+        x_inicial=30
+        y_incial=30
+
+       
 
     # calidad del mapa, anchura del hoyo  calidad del mapa = persistencia del mapa que tan rapido cambio de no hay obstaculo a si hay obstaculo, numero maximo de iteraciones, aumentando el numero de iteraciones, RMHC
 
     def navegar(self):
         flag = self.flag.get()
+        flag2 = self.flag2.get()
         print flag
         print magnitud[171]
 
@@ -316,7 +332,8 @@ class Application(Frame):
         if flag ==1:
             time.sleep(1)
             self.flag.set(0)
-        root.after(100,self.navegar)
+        if flag2 == 1:
+            root.after(100,self.navegar)
 
 
 
@@ -400,11 +417,12 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     print "theta is: ", theta
     # Get current map bytes as grayscale
     slam.getmap(mapbytes)
-
+    image = Image.frombuffer('L', (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS), mapbytes, 'raw', 'L', 0, 1)
+    image.save('hola.png' )
     display.displayMap(mapbytes)
 
     display.setPose(x, y, theta)
-    
+
     # Exit on ESCape
     key = display.refresh()
     if key != None and (key & 0x1A):
