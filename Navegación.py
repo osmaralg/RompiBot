@@ -15,6 +15,7 @@ import glob
 import subprocess
 from rrt_with_pathsmoothing import *
 
+iframe = 0
 
 class RRT():
     u"""
@@ -263,17 +264,19 @@ global robot
 global obstacleList
 global donothing
 global iframe
-global path
 
-path = []
+
+
+
 obstacleList=[]
 iframe = 0
 donothing = False
 
+
 robot = RompiBot()
 
 
-slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS,10)
+slam = RMHC_SLAM(LaserModel(), MAP_SIZE_PIXELS, MAP_SIZE_METERS,8)
 # Set up a SLAM display
 display = SlamShow(MAP_SIZE_PIXELS, MAP_SIZE_METERS * 1000 / MAP_SIZE_PIXELS, 'SLAM')
 # Initialize empty map
@@ -306,10 +309,13 @@ class Application(Frame):
         self.front_left = IntVar()
         self.front_right = IntVar()
         self.name_hokuyo_data = StringVar()
+        self.contador = IntVar()
+        self.lenpath = IntVar()
         self.flag = IntVar()   # Variable para que la primera vez que se llame navegar espere 1 s despues cada 100 ms
         flag = 1
         self.flag2 = IntVar() # Variable para detener la navegación y cambiar a manual
         flag2 = 1
+        self.flag1 = IntVar()
         print ('Program started')
         vrep.simxFinish(-1)  # just in case, close all opened connections
 
@@ -335,7 +341,8 @@ class Application(Frame):
             self.front_right.set(front_right)
             self.flag.set(flag)
             self.flag2.set(flag2)
-
+            self.contador.set(0)
+            self.lenpath.set(0)
 
             if returnCode == vrep.simx_return_ok:
                 print ('Corrio bien la lectura del handle')
@@ -472,6 +479,9 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity, vrep.simx_opmode_blocking)
     def seguir(self):
         import vrep
+        print path
+        lenpath = self.lenpath.get()
+        contador = self.contador.get()
         #print "seguir trayectoria!!!!!!!!!!!!!!!!!!!!!!!!!"
         clientID = self.clientID.get()
         back_left = self.back_left.get()
@@ -482,24 +492,29 @@ class Application(Frame):
         x_actual=x
         y_actual=y
         theta1 = theta
+        print "la equis es", x_actual
 
         division = theta / 360
         theta1 = theta - math.floor(division)*360
-        theta_actual=math.radians(theta1)
+        theta_actual=theta1
         print "x actual",x
         print "y actual",y
-        print "theta actual es radianes", theta_actual
         print "theta actual es en grados", theta1
 
+        print "el primer elemento de path es:"
 
-	
-        x_meta=15000
-        y_meta=19000
+        print path[contador]
+        primero = path[contador]
+        print "el segudno elemento del primer elementos es:"
+        x_meta=primero[0]*30000/800
+        y_meta=primero[1]*30000/800
         k=1 #ganancia de velocidad
 	
         theta_meta=math.atan2((y_meta-y_actual+.00001),(x_meta-x_actual))+math.pi/2 # -menos posicion inicial
-        print "theta meta es en radianes", theta_meta
-        print "theta meta es en grados", math.degrees(theta_meta)
+        theta_meta = math.degrees(theta_meta)
+        if theta_meta<0:
+            theta_meta=theta_meta+360
+        print "theta meta es en grados", theta_meta
         errotheta=theta_meta-theta_actual
         v=k*errotheta
         velocity_left=-v
@@ -513,13 +528,14 @@ class Application(Frame):
                 print "error en pos es:", error_pos
                 velocity_left=k*error_pos
                 velocity_right=k*error_pos
+
         for i in range(165,175):
             if magnitud[i]<1000:
                 print "hay que girar"
 
 
 
-        limit = 1
+        limit = .2
         if velocity_left > limit:
             velocity_left=limit
 
@@ -541,13 +557,27 @@ class Application(Frame):
         vrep.simxSetJointTargetVelocity(clientID, front_left,  velocity_left, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, back_right,  velocity_right, vrep.simx_opmode_blocking)
         vrep.simxSetJointTargetVelocity(clientID, front_right, velocity_right, vrep.simx_opmode_blocking)
-        if error_pos > 150:
-        	root.after(80,self.seguir)
+        if error_pos > 150:      # si ya llego al primer segmento de la trayectoria entonces caminar hacia el siguiente
+        	root.after(80,self.seguir)  # si ha llegado al segmento entonces hay que volver a llamar la funcion
         else:
-            self.setvelocity_stop()
+            contador = contador - 1   # si ya no hay más segmentos dentener el carro y ya no llamar más a esta funcion
+            self.contador.set(contador)
+            if contador < 1:
+                self.setvelocity_stop
+            else:
+                root.after(80,self.seguir)
+
+
     def creartrayectoria(self):
-        x_inicial=30
-        y_incial=30
+        print "voy a crear una trayectoria"
+        print "la x es :", x
+        print "la y actual es :", y
+        x_inicial=x*800/30000
+        y_incial=y*800/30000
+        x_meta = 400   #en pixeles
+        y_meta = 400   #en pixeles
+        print "la equis en pixeles es " ,x_inicial
+        print "la y inicial es en pixeles:", y_incial
         import matplotlib.pyplot as plt
         # ====Search Path with RRT====
         # Parameter
@@ -569,17 +599,15 @@ class Application(Frame):
 
         print im
         size = 800  # number of the pixels of the image
+        pixel_inicial = 0 # apartir de que pixel tomar los puntos de ocupación
         resolution = 2  # step size pixel, if 1 evaluates every pixel if 4  every 4 pixels obstacle sambple
         obstaclesize = 13  # radious of the obstacle circle
         darkness = 127  # gray scale if 127 gray equals obstacle if 0 only black equals obstacle
-        for i in range(0, size, resolution):
-            for j in range(0, size, resolution):
+        for j in range(pixel_inicial, size, resolution):
+            for i in range(pixel_inicial, size, resolution):
                 if im[0, i, j] < darkness:
                     im[0, i, j] = obstaclesize
-                    istr = str(i)
-                    jstr = str(j)
-
-                    coordenada = i, j, obstaclesize
+                    coordenada = j, i, obstaclesize
                     ocupado.append(coordenada)
                 else:
                     im[0, i, j] = 0
@@ -588,10 +616,12 @@ class Application(Frame):
         obstacleList = ocupado
         print "la lenght de ocupado es : "
         print len(ocupado)
-
-        rrt = RRT(start=[550, 300], goal=[300, 500], randArea=[0, size], obstacleList=obstacleList)
+        global path
+        rrt = RRT(start=[x_inicial, y_incial], goal=[x_meta, y_meta], randArea=[0, size], obstacleList=obstacleList)
         path = rrt.Planning(animation=False)
-        path = path*800/30
+        print "lenght de path es :" ,len(path)
+        self.lenpath.set(len(path))
+        self.contador.set(len(path)-1)
         print path
 
     # calidad del mapa, anchura del hoyo  calidad del mapa = persistencia del mapa que tan rapido cambio de no hay obstaculo a si hay obstaculo, numero maximo de iteraciones, aumentando el numero de iteraciones, RMHC
@@ -600,17 +630,36 @@ class Application(Frame):
         flag = self.flag.get()
         flag2 = self.flag2.get()
         print flag
+        print "esta es la distancia al frente"
         print magnitud[171]
+        print "esta es la distancia a la derecha: ", magnitud[0]
+        print "estoy navegando"
+
+
+        self.setvelocity()
+
+        if magnitud[171]<2000:
+            self.setvelocity_right()
+            print "hay un obstaculo a dos metros al frente"
+            if magnitud[1]>600 or magnitud[1]==0:
+                self.setvelocity_right()
+            else:
+                self.setvelocity()
+
+                print "estamos muy pegados a la derecha vamos al frente un poco mas"
+
+
+
+
 
         if magnitud[171]==0:
+            #checar que no hay nada a la izquierda si no que siga girando
             self.setvelocity()
-        if magnitud[171]>2000:
-            print "hay un obstaculo justo al frente"
-            self.setvelocity_right()
-        print "estoy navegando"
+
         if flag ==1:
             time.sleep(1)
             self.flag.set(0)
+
         if flag2 == 1:
             root.after(100,self.navegar)
 
@@ -625,6 +674,7 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
 
 
     import vrep
+    import matplotlib as plt
     clientID = app.clientID.get()
     name_hokuyo_data = "hokuyo_data"
     print("Leyendo string")
@@ -646,7 +696,6 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     global magnitud
     magnitud = np.arange(683)
     sec, msec = vrep.simxGetPingTime(clientID)
-    print "Ping time: %f" % (sec + msec / 1000.)
     timesim=simtime
     pos_left= -math.degrees(pos_left)
     pos_right = math.degrees(pos_right)
@@ -660,7 +709,7 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     print "pos right is:", pos_right
 
 
-    odometries  = [timesim,pos_right,pos_left]
+    odometries  = [timesim,pos_right,pos_left]  # odometries  = [timesim,pos_right,pos_left]
     print odometries
     timesim = str(timesim)
     pos_right = str(pos_right)
@@ -678,22 +727,20 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
         s = s + magnitud1 + " "
     file_test.write("\n")
     scans = []
-
     #print s
 
     toks = s.split()[0:-1]  # ignore ''
     #print toks
     lidar = [int(tok) for tok in toks[0:]]
     lengthlidar=len(lidar)
-    print lengthlidar
     dxy,dtheta,dt =robot.computeVelocities(odometries)
-    slam.update(lidar,(dxy,dtheta,dt)) #voy aqui convertir la lista de sting a una lista
+    slam.update(lidar) #voy aqui convertir la lista de sting a una lista (dxy,dtheta,dt)
+    # Get current robot position
     global x
     global y
     global theta
-    # Get current robot position
     x, y, theta = slam.getpos()
-    print "theta is: ", theta
+
     # Get current map bytes as grayscale
     slam.getmap(mapbytes)
     image = Image.frombuffer('L', (MAP_SIZE_PIXELS, MAP_SIZE_PIXELS), mapbytes, 'raw', 'L', 0, 1)
@@ -701,7 +748,8 @@ def task():  #Esta función se llama cada 300 ms que es el tiempo de ping entre 
     display.displayMap(mapbytes)
 
     display.setPose(x, y, theta)
-
+    save_frame()
+    save_last_frame()
     # Exit on ESCape
     key = display.refresh()
     if key != None and (key & 0x1A):
@@ -715,6 +763,7 @@ app.mainloop()
 
 
 root.destroy()
+save_movie("animation.gif", 0.1)
 file_test.close()
 import vrep
 # Now close the connection to V-REP:
