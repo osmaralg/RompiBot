@@ -508,7 +508,7 @@ class Application(Frame):
         print "el segudno elemento del primer elementos es:"
         x_meta=primero[0]*30000/800
         y_meta=primero[1]*30000/800
-        k=1 #ganancia de velocidad
+        k=.01 #ganancia de velocidad
 	
         theta_meta=math.atan2((y_meta-y_actual+.00001),(x_meta-x_actual))+math.pi/2 # -menos posicion inicial
         theta_meta = math.degrees(theta_meta)
@@ -631,14 +631,14 @@ class Application(Frame):
         flag2 = self.flag2.get()
         print flag
         print "esta es la distancia al frente"
-        print magnitud[171]
+        print magnitud[150]
         print "esta es la distancia a la derecha: ", magnitud[0]
         print "estoy navegando"
 
 
         self.setvelocity()
 
-        if magnitud[171]<2000:
+        if magnitud[150]<2000:
             self.setvelocity_right()
             print "hay un obstaculo a dos metros al frente"
             if magnitud[1]>600 or magnitud[1]==0:
@@ -652,9 +652,14 @@ class Application(Frame):
 
 
 
-        if magnitud[171]==0:
+        if magnitud[171]>2000:
             #checar que no hay nada a la izquierda si no que siga girando
             self.setvelocity()
+            if magnitud[339]<700:
+                self.setvelocity_right()
+        if magnitud[171]==0:
+            self.setvelocity()
+
 
         if flag ==1:
             time.sleep(1)

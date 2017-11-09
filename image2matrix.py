@@ -26,7 +26,7 @@ print im
 
 for i in range(0,800):
     for j in range(0,800):
-        if im[0,i,j]<125:
+        if im[0,i,j]<190:
             im[0,i,j]=1
             istr=str(i)
             jstr=str(j)
@@ -35,7 +35,7 @@ for i in range(0,800):
             ocupado.append(coordenada)
         else:
             im[0,i,j]=0
-            #print "espacio libre ",i,j
+            print "espacio libre ",i,j
 
 
 size = len(ocupado)
